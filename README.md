@@ -2,6 +2,8 @@
 
 Flutter UpChunk is a simple port of the JS library https://github.com/muxinc/upchunk done by MUX inc.
 
+## Installation
+
 For the code to work, these 2 packages need to be added to the `dependencies` section in `pubspec.yaml`:
  - `connectivity: ^2.0.0` (or latest)
  - `dio: ^3.0.10` (or latest)
@@ -9,10 +11,6 @@ For the code to work, these 2 packages need to be added to the `dependencies` se
 You can find these packages here:
  * https://pub.dev/packages/connectivity
  * https://pub.dev/packages/dio
-
-The `dio` package could easily be replaced by the standard `http` package included in Flutter core if necessary.
-
-## Installation
 
 Create your Flutter project and add these 2 files to your project in the right folder:
  - `up_chunk.dart` contains the UpChunk class to use directly in your code.
