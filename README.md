@@ -3,8 +3,8 @@
 Flutter UpChunk is a simple port of the JS library https://github.com/muxinc/upchunk done by MUX inc.
 
 For the code to work, these 2 packages need to be added to the `dependencies` section in `pubspec.yaml`:
- - `connectivity: ^2.0.0`
- - `dio: ^3.0.10`
+ - `connectivity: ^2.0.0` (or latest)
+ - `dio: ^3.0.10` (or latest)
 
 You can find these packages here:
  * https://pub.dev/packages/connectivity
