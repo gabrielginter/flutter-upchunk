@@ -27,6 +27,15 @@ Add the following import to the `Widget` that will use **UpChunk**
 ### Example
 
 ```dart
+Future<String> _getUploadUrl() {
+  String uploadUrl;
+  // Perform call either to your API or directly to MUX to retrieve the upload URL
+  // ...
+  //
+  
+  return uploadUrl;
+}
+
 // Chunk upload
 var uploadOptions = UpChunkOptions()
   ..endPointResolver = _getUploadUrl()
