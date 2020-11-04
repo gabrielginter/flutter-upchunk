@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:flutter_upchunk/up_chunk.dart';
+import 'package:flutter_upchunk/flutter_upchunk.dart';
 
 void main() {
   test('check endpoint options validation', () {

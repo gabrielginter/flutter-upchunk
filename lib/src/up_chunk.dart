@@ -1,5 +1,3 @@
-library flutter_upchunk;
-
 import 'dart:async';
 import 'dart:io';
 
@@ -8,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:mime/mime.dart';
 
-import 'connection_status_singleton.dart';
+import 'package:flutter_upchunk/src/connection_status_singleton.dart';
 
 class UpChunkOptions {
   String endPoint;
