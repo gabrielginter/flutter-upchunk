@@ -1,6 +1,6 @@
 name: flutter_upchunk
 description: A chunk uploader based on the JS library https://github.com/muxinc/upchunk done by MUX, Inc.
-version: 0.1.1
+version: 0.1.2
 author: Gabriel Ginter
 homepage: https://github.com/gabrielginter/flutter-upchunk
 
