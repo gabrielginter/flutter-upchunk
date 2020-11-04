@@ -195,9 +195,9 @@ class UpChunk {
       onSendProgress: (int sent, int total) {
         if (_onProgress != null) {
           final bytesSent = _chunkCount * _chunkByteSize;
-          final percentProgress = (bytesSent + sent) * 100 / _fileSize;
+          final percentProgress = (bytesSent + sent) * 100.0 / _fileSize;
 
-          if (percentProgress != 100)
+          if (percentProgress < 100.0)
             _onProgress(progress: percentProgress);
         }
       },
@@ -257,7 +257,11 @@ class UpChunk {
           }
 
           if (_onProgress != null) {
-            final percentProgress = (100 / _totalChunks) * _chunkCount;
+            double percentProgress = 100.0;
+            if (_chunkCount < _totalChunks) {
+              final bytesSent = _chunkCount * _chunkByteSize;
+              percentProgress = bytesSent * 100.0 / _fileSize;
+            }
             _onProgress(progress: percentProgress);
           }
         } else if (temporaryErrorCodes.contains(res.statusCode)) {
