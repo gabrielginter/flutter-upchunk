@@ -1,26 +1,17 @@
 # Flutter UpChunk
 
-Flutter UpChunk is a simple port of the JS library https://github.com/muxinc/upchunk done by MUX inc.
+Flutter UpChunk is a simple port of the JS library https://github.com/muxinc/upchunk done by MUX, Inc.
 
 ## Installation
 
-For the code to work, these 2 packages need to be added to the `dependencies` section in `pubspec.yaml`:
- - `connectivity: ^2.0.0` (or latest)
- - `dio: ^3.0.10` (or latest)
-
-You can find these packages here:
- * https://pub.dev/packages/connectivity
- * https://pub.dev/packages/dio
-
-Create your Flutter project and add these 2 files to your project in the right folder:
- - `up_chunk.dart` contains the UpChunk class to use directly in your code.
- - `connection_status_singleton.dart` a helper class used by `up_chunk.dart` to detect offline/online status changes during upload lifespan.
+Add to the package to the `dependencies` section in `pubspec.yaml`:
+ - `flutter_upchunk: ^2.0.0` (or latest)
 
 ## Usage
 
-Add the following import to the `Widget` that will use **UpChunk**
+Add the following import to the `.dart` file that will use **UpChunk**
 
-`import 'package:{your_app_name}/{your_folder_path}/up_chunk.dart';` (replace 'your_app_name' with your app package name and 'your_folder_path' with the folder path containing `up_chunk.dart`)
+`import 'package:flutter_upchunk/up_chunk.dart';`
 
 ### Example
 
@@ -30,7 +21,7 @@ Future<String> _getUploadUrl() {
   // Perform call either to your API or directly to MUX to retrieve the upload URL
   // ...
   //
-  
+
   return uploadUrl;
 }
 
@@ -139,4 +130,4 @@ Returns an instance of `UpChunk` and begins uploading the specified `File`.
 
 ## Credit
 
-Original code by MUX, Inc. and ported to Dart 🎯 with ❤ by a Flutter developer. 
+Original code by MUX, Inc. and ported to Dart 🎯 with ❤ by a Flutter developer.

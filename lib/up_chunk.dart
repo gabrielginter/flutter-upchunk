@@ -1,3 +1,5 @@
+library flutter_upchunk;
+
 import 'dart:async';
 import 'dart:io';
 
