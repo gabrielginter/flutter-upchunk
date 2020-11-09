@@ -5,7 +5,7 @@ Flutter UpChunk is a simple port of the JS library https://github.com/muxinc/upc
 ## Installation
 
 Add the package to the `dependencies` section in `pubspec.yaml`:
- - `flutter_upchunk: ^0.1.2` (or latest)
+ - `flutter_upchunk: ^0.1.4` (or latest)
 
 ## Usage
 
@@ -66,7 +66,7 @@ Returns an instance of `UpChunk` and begins uploading the specified `File`.
 
 - `file` <small>type: [`File`](https://api.dart.dev/stable/2.10.3/dart-io/File-class.html) (required)</small>
 
-  The file you'd like to upload. For example, you might just want to use the file from an input with a type of "file".
+  The file you'd like to upload.
 
 - `headers` <small>type: `Map<String, String>`</small>
 

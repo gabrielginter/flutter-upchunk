@@ -4,26 +4,26 @@ import 'dart:io';
 import 'package:connectivity/connectivity.dart';
 
 class ConnectionStatusSingleton {
-  //This creates the single instance by calling the `_internal` constructor specified below
+  /// Creates the single instance by calling the `_internal` constructor specified below
   static final ConnectionStatusSingleton _singleton = new ConnectionStatusSingleton._internal();
   ConnectionStatusSingleton._internal();
 
-  //This is what's used to retrieve the instance through the app
+  /// Retrieves the singleton instance
   static ConnectionStatusSingleton getInstance() => _singleton;
 
-  //This tracks the current connection status
+  /// Tracks the current connection status
   bool hasConnection = false;
 
-  //This is how we'll allow subscribing to connection changes
+  /// Allows subscribing to connection changes
   StreamController connectionChangeController = new StreamController.broadcast();
 
-  //flutter_connectivity
+  /// flutter_connectivity object
   final Connectivity _connectivity = Connectivity();
 
   bool _initialized;
 
-  //Hook into flutter_connectivity's Stream to listen for changes
-  //And check the connection status out of the gate
+  /// Hooks into [_connectivity]'s Stream to listen for changes
+  /// and checks the connection status out of the gate
   void initialize() {
     if (_initialized) return;
 
@@ -35,19 +35,17 @@ class ConnectionStatusSingleton {
 
   Stream get connectionChange => connectionChangeController.stream;
 
-  //A clean up method to close our StreamController
-  //   Because this is meant to exist through the entire application life cycle this isn't
-  //   really an issue
+  /// A clean up method to close our StreamController
   void dispose() {
     connectionChangeController.close();
   }
 
-  //flutter_connectivity's listener
+  /// [_connectivity]'s listener
   void _connectionChange(ConnectivityResult result) {
     checkConnection();
   }
 
-  //The test to actually see if there is a connection
+  /// Tests to verify if there's indeed connected to the internet
   Future<bool> checkConnection() async {
     bool previousConnection = hasConnection;
 

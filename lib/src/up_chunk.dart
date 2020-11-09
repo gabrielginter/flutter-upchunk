@@ -7,28 +7,14 @@ import 'package:dio/dio.dart';
 import 'package:mime/mime.dart';
 
 import 'package:flutter_upchunk/src/connection_status_singleton.dart';
-
-class UpChunkOptions {
-  String endPoint;
-  Future<String> endPointResolver;
-  File file;
-  Map<String, String> headers;
-  int chunkSize;
-  int attempts;
-  int delayBeforeAttempt;
-
-  void Function() onOnline;
-  void Function() onOffline;
-  void Function({ @required int chunkNumber, @required int chunkSize }) onAttempt;
-  void Function({ @required String message, @required int chunkNumber, @required int attemptsLeft }) onAttemptFailure;
-  void Function({ @required String message, @required int chunk, @required int attempts }) onError;
-  void Function() onSuccess;
-  void Function({ @required double progress }) onProgress;
-}
+import 'package:flutter_upchunk/src/up_chunk_options.dart';
 
 class UpChunk {
+  /// HTTP response codes implying the PUT method has been successful
   final successfulChunkUploadCodes = const [200, 201, 202, 204, 308];
-  final temporaryErrorCodes = const [408, 502, 503, 504]; // These error codes imply a chunk may be retried
+
+  /// HTTP response codes implying a chunk may be retried
+  final temporaryErrorCodes = const [408, 502, 503, 504];
 
   String endPoint;
   Future<String> endPointResolver;
@@ -50,6 +36,8 @@ class UpChunk {
   bool _offline;
   bool _paused;
 
+  bool _uploadFailed = false;
+
   void Function() _onOnline;
   void Function() _onOffline;
   void Function({ @required int chunkNumber, @required int chunkSize }) _onAttempt;
@@ -60,6 +48,7 @@ class UpChunk {
 
   static UpChunk createUpload(UpChunkOptions options) => UpChunk._internal(options);
 
+  /// Internal constructor used by [createUpload]
   UpChunk._internal(UpChunkOptions options) {
     endPoint = options.endPoint;
     endPointResolver = options.endPointResolver;
@@ -99,8 +88,10 @@ class UpChunk {
     connectionStatus.connectionChange.listen(_connectionChanged);
   }
 
+  /// It pauses the upload, the [_chunk] currently being uploaded will finish first before pausing the next [_chunk]
   pause() => _paused = true;
 
+  /// It resumes the upload for the next [_chunk]
   resume() {
     if (!_paused) return;
 
@@ -108,6 +99,7 @@ class UpChunk {
     _sendChunks();
   }
 
+  /// It gets [file]'s mime type, if possible
   _getMimeType() async {
     try {
       _fileMimeType = lookupMimeType(file.path);
@@ -116,6 +108,7 @@ class UpChunk {
     }
   }
 
+  /// It validates the passed options
   _validateOptions() {
     if (endPoint == null && endPointResolver == null)
       throw new Exception('either endPoint or endPointResolver must be defined');
@@ -133,6 +126,10 @@ class UpChunk {
       throw new Exception('delayBeforeAttempt must be a positive number');
   }
 
+  /// Gets a value for [_endpointValue]
+  ///
+  /// If [endPoint] is provided it converts it to a Uri and returns the value,
+  /// otherwise it uses [endPointResolver] to resolve the Uri value to return
   Future<Uri> _getEndpoint() async {
     if (endPoint != null) {
       _endpointValue = Uri.parse(endPoint);
@@ -144,6 +141,10 @@ class UpChunk {
     return _endpointValue;
   }
 
+  /// Callback for [ConnectionStatusSingleton] to notify connection changes
+  ///
+  /// if the connection drops [_offline] is marked as true and upload us paused,
+  /// if connection is restore [_offline] is marked as false and resumes the upload
   _connectionChanged(dynamic hasConnection) {
     if (hasConnection) {
       if (!_offline)
@@ -163,7 +164,7 @@ class UpChunk {
     }
   }
 
-  // Send chunk of the file with appropriate headers and add post parameters if it's last chunk
+  /// Sends [_chunk] of the file with appropriate headers
   Future<Response> _sendChunk() async {
     // add chunk request headers
     var rangeStart = _chunkCount * _chunkByteSize;
@@ -178,10 +179,10 @@ class UpChunk {
     }
     headers.forEach((key, value) => putHeaders.putIfAbsent(key, () => value));
 
-    // returns future with http response
     if (_onAttempt != null)
       _onAttempt(chunkNumber: _chunkCount, chunkSize: _chunkLength,);
 
+    // returns future with http response
     return Dio().putUri(
       _endpointValue,
       options: Options(
@@ -204,9 +205,8 @@ class UpChunk {
     );
   }
 
-  // Get portion of the file of x bytes corresponding to chunkSize
+  /// Gets [_chunk] and [_chunkLength] for the portion of the file of x bytes corresponding to [_chunkByteSize]
   _getChunk() {
-    // Since we start with 0-chunkSize for the range, we need to subtract 1.
     final length = _totalChunks == 1 ? _fileSize : _chunkByteSize;
     final start = length * _chunkCount;
 
@@ -217,11 +217,11 @@ class UpChunk {
       _chunkLength = _fileSize - start;
   }
 
-  // Called on net failure. If retry counter !== 0, retry after delayBeforeAttempt
+  /// Called on net failure. If retry [_attemptCount] < [attempts], retry after [delayBeforeAttempt]
   _manageRetries() {
     if (_attemptCount < attempts) {
       _attemptCount = _attemptCount + 1;
-      Timer(Duration(milliseconds: 1000), () => _sendChunks());
+      Timer(Duration(seconds: delayBeforeAttempt), () => _sendChunks());
 
       if (_onAttemptFailure != null)
         _onAttemptFailure(
@@ -241,7 +241,7 @@ class UpChunk {
       );
   }
 
-  // Manage the whole upload by calling getChunk & sendChunk
+  /// Manages the whole upload by calling [_getChunk] and [_sendChunk]
   _sendChunks() {
     if (_paused || _offline)
       return;
@@ -273,6 +273,8 @@ class UpChunk {
           if (_paused || _offline)
             return;
 
+          _uploadFailed = true;
+
           if (_onError != null)
             _onError(
               message: 'Server responded with ${res.statusCode}. Stopping upload.',
@@ -291,12 +293,17 @@ class UpChunk {
     );
   }
 
+  /// Restarts the upload after if the upload failed and came to a complete stop
   restart() {
+    if (!_uploadFailed)
+      throw Exception('Upload hasn\'t yet failed, please use restart only after all retries have failed.');
+
     _chunkCount = 0;
     _chunkByteSize = chunkSize * 1024;
     _attemptCount = 0;
     _offline = false;
     _paused = false;
+    _uploadFailed = false;
 
     _sendChunks();
   }
