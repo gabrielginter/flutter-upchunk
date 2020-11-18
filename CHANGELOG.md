@@ -1,5 +1,9 @@
 # CHANGES
 
+## [0.1.5] - 2020-11-18
+
+* Restart was not being exectuted when called, flag marking the failed upload was missing
+
 ## [0.1.4] - 2020-11-09
 
 * Added documentation

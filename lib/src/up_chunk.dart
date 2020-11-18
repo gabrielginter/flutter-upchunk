@@ -233,6 +233,8 @@ class UpChunk {
       return;
     }
 
+    _uploadFailed = true;
+
     if (_onError != null)
       _onError(
         message: 'An error occurred uploading chunk $_chunkCount. No more retries, stopping upload',
