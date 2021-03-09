@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
-
 import 'package:dio/dio.dart';
 import 'package:mime/mime.dart';
 
@@ -16,35 +14,35 @@ class UpChunk {
   /// HTTP response codes implying a chunk may be retried
   final temporaryErrorCodes = const [408, 502, 503, 504];
 
-  String endPoint;
-  Future<String> endPointResolver;
-  File file;
-  Map<String, String> headers;
-  int chunkSize;
-  int attempts;
-  int delayBeforeAttempt;
+  String? endPoint;
+  Future<String>? endPointResolver;
+  File? file;
+  Map<String, String> headers = {};
+  int chunkSize = 0;
+  int attempts = 0;
+  int delayBeforeAttempt = 0;
 
-  Stream<List<int>> _chunk;
-  int _chunkLength;
-  int _fileSize;
-  int _chunkCount;
-  int _chunkByteSize;
-  String _fileMimeType;
-  Uri _endpointValue;
-  int _totalChunks;
-  int _attemptCount;
-  bool _offline;
-  bool _paused;
+  Stream<List<int>> _chunk = Stream.empty();
+  int _chunkLength = 0;
+  int _fileSize = 0;
+  int _chunkCount = 0;
+  int _chunkByteSize = 0;
+  String? _fileMimeType;
+  Uri _endpointValue = Uri();
+  int _totalChunks = 0;
+  int _attemptCount = 0;
+  bool _offline = false;
+  bool _paused = false;
 
   bool _uploadFailed = false;
 
-  void Function() _onOnline;
-  void Function() _onOffline;
-  void Function({ @required int chunkNumber, @required int chunkSize }) _onAttempt;
-  void Function({ @required String message, @required int chunkNumber, @required int attemptsLeft }) _onAttemptFailure;
-  void Function({ @required String message, @required int chunk, @required int attempts }) _onError;
-  void Function() _onSuccess;
-  void Function({ @required double progress }) _onProgress;
+  void Function()? _onOnline;
+  void Function()? _onOffline;
+  void Function(int chunkNumber, int chunkSize)? _onAttempt;
+  void Function(String message, int chunkNumber, int attemptsLeft)? _onAttemptFailure;
+  void Function(String message, int chunk, int attempts)? _onError;
+  void Function()? _onSuccess;
+  void Function(double progress )? _onProgress;
 
   static UpChunk createUpload(UpChunkOptions options) => UpChunk._internal(options);
 
@@ -53,18 +51,14 @@ class UpChunk {
     endPoint = options.endPoint;
     endPointResolver = options.endPointResolver;
     file = options.file;
-    headers = options.headers ?? Map<String, String>();
-    chunkSize = options.chunkSize ?? 5120;
-    attempts = options.attempts ?? 5;
-    delayBeforeAttempt = options.delayBeforeAttempt ?? 1;
+    headers = options.headers;
+    chunkSize = options.chunkSize;
+    attempts = options.attempts;
+    delayBeforeAttempt = options.delayBeforeAttempt;
 
     _validateOptions();
 
-    _chunkCount = 0;
     _chunkByteSize = chunkSize * 1024;
-    _attemptCount = 0;
-    _offline = false;
-    _paused = false;
     _onOnline = options.onOnline;
     _onOffline = options.onOffline;
     _onAttempt = options.onAttempt;
@@ -75,7 +69,7 @@ class UpChunk {
 
     _getEndpoint()
       .then((value) async {
-        _fileSize = await options.file.length();
+        _fileSize = await options.file!.length();
         _totalChunks =  (_fileSize / _chunkByteSize).ceil();
 
         await _getMimeType();
@@ -102,7 +96,7 @@ class UpChunk {
   /// It gets [file]'s mime type, if possible
   _getMimeType() async {
     try {
-      _fileMimeType = lookupMimeType(file.path);
+      _fileMimeType = lookupMimeType(file!.path);
     } catch (_) {
       _fileMimeType = null;
     }
@@ -116,13 +110,13 @@ class UpChunk {
     if (file == null)
       throw new Exception('file can''t be null');
 
-    if (chunkSize != null && (chunkSize <= 0 || chunkSize % 64 != 0))
+    if (chunkSize <= 0 || chunkSize % 64 != 0)
       throw new Exception('chunkSize must be a positive number in multiples of 64');
 
-    if (attempts != null && attempts <= 0)
+    if (attempts <= 0)
       throw new Exception('retries must be a positive number');
 
-    if (delayBeforeAttempt != null && delayBeforeAttempt < 0)
+    if (delayBeforeAttempt < 0)
       throw new Exception('delayBeforeAttempt must be a positive number');
   }
 
@@ -132,12 +126,12 @@ class UpChunk {
   /// otherwise it uses [endPointResolver] to resolve the Uri value to return
   Future<Uri> _getEndpoint() async {
     if (endPoint != null) {
-      _endpointValue = Uri.parse(endPoint);
+      _endpointValue = Uri.parse(endPoint!);
       return _endpointValue;
     }
 
     endPoint = await endPointResolver;
-    _endpointValue = Uri.parse(endPoint);
+    _endpointValue = Uri.parse(endPoint!);
     return _endpointValue;
   }
 
@@ -152,7 +146,7 @@ class UpChunk {
 
       _offline = false;
 
-      if (_onOnline != null) _onOnline();
+      if (_onOnline != null) _onOnline!();
 
       _sendChunks();
     }
@@ -160,7 +154,7 @@ class UpChunk {
     if (!hasConnection) {
       _offline = true;
 
-      if (_onOffline != null) _onOffline();
+      if (_onOffline != null) _onOffline!();
     }
   }
 
@@ -175,12 +169,12 @@ class UpChunk {
       Headers.contentLengthHeader: _chunkLength
     };
     if (_fileMimeType != null){
-      putHeaders.putIfAbsent(Headers.contentTypeHeader, () => _fileMimeType);
+      putHeaders.putIfAbsent(Headers.contentTypeHeader, () => _fileMimeType!);
     }
     headers.forEach((key, value) => putHeaders.putIfAbsent(key, () => value));
 
     if (_onAttempt != null)
-      _onAttempt(chunkNumber: _chunkCount, chunkSize: _chunkLength,);
+      _onAttempt!(_chunkCount, _chunkLength,);
 
     // returns future with http response
     return Dio().putUri(
@@ -199,7 +193,7 @@ class UpChunk {
           final percentProgress = (bytesSent + sent) * 100.0 / _fileSize;
 
           if (percentProgress < 100.0)
-            _onProgress(progress: percentProgress);
+            _onProgress!(percentProgress);
         }
       },
     );
@@ -210,7 +204,7 @@ class UpChunk {
     final length = _totalChunks == 1 ? _fileSize : _chunkByteSize;
     final start = length * _chunkCount;
 
-    _chunk = file.openRead(start, start + length);
+    _chunk = file!.openRead(start, start + length);
     if (start + length <= _fileSize)
       _chunkLength = length;
     else
@@ -224,10 +218,10 @@ class UpChunk {
       Timer(Duration(seconds: delayBeforeAttempt), () => _sendChunks());
 
       if (_onAttemptFailure != null)
-        _onAttemptFailure(
-          message:'An error occurred uploading chunk $_chunkCount. ${attempts - _attemptCount} retries left.',
-          chunkNumber: _chunkCount,
-          attemptsLeft: attempts - _attemptCount,
+        _onAttemptFailure!(
+          'An error occurred uploading chunk $_chunkCount. ${attempts - _attemptCount} retries left.',
+          _chunkCount,
+          attempts - _attemptCount,
         );
 
       return;
@@ -236,10 +230,10 @@ class UpChunk {
     _uploadFailed = true;
 
     if (_onError != null)
-      _onError(
-        message: 'An error occurred uploading chunk $_chunkCount. No more retries, stopping upload',
-        chunk: _chunkCount,
-        attempts: _attemptCount,
+      _onError!(
+        'An error occurred uploading chunk $_chunkCount. No more retries, stopping upload',
+        _chunkCount,
+        _attemptCount,
       );
   }
 
@@ -255,7 +249,7 @@ class UpChunk {
           if (_chunkCount < _totalChunks) {
             _sendChunks();
           } else {
-            if (_onSuccess != null) _onSuccess();
+            if (_onSuccess != null) _onSuccess!();
           }
 
           if (_onProgress != null) {
@@ -264,7 +258,7 @@ class UpChunk {
               final bytesSent = _chunkCount * _chunkByteSize;
               percentProgress = bytesSent * 100.0 / _fileSize;
             }
-            _onProgress(progress: percentProgress);
+            _onProgress!(percentProgress);
           }
         } else if (temporaryErrorCodes.contains(res.statusCode)) {
           if (_paused || _offline)
@@ -278,10 +272,10 @@ class UpChunk {
           _uploadFailed = true;
 
           if (_onError != null)
-            _onError(
-              message: 'Server responded with ${res.statusCode}. Stopping upload.',
-              chunk: _chunkCount,
-              attempts: _attemptCount,
+            _onError!(
+              'Server responded with ${res.statusCode}. Stopping upload.',
+              _chunkCount,
+              _attemptCount,
             );
         }
       },

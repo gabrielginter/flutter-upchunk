@@ -20,7 +20,7 @@ class ConnectionStatusSingleton {
   /// flutter_connectivity object
   final Connectivity _connectivity = Connectivity();
 
-  bool _initialized;
+  bool _initialized = false;
 
   /// Hooks into [_connectivity]'s Stream to listen for changes
   /// and checks the connection status out of the gate

@@ -14,7 +14,10 @@ void main() {
   test('check file options validation', () {
     final options = UpChunkOptions()
       ..endPoint = ''
-      ..endPointResolver = null;
+      ..endPointResolver = null
+      ..onAttempt = (c, a) {
+
+      };
 
     expect(() => UpChunk.createUpload(options), throwsException);
   });

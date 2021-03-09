@@ -24,7 +24,7 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
+  MyHomePage({ this.title = ''});
 
   final String title;
 
@@ -40,7 +40,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   int _progress = 0;
   bool _uploadComplete = false;
-  String _errorMessage;
+  String _errorMessage = '';
 
   void _getFile() async {
     final pickedFile = await picker.getVideo(source: ImageSource.gallery);
@@ -53,18 +53,18 @@ class _MyHomePageState extends State<MyHomePage> {
   void _uploadFile(File fileToUpload) {
     _progress = 0;
     _uploadComplete = false;
-    _errorMessage = null;
+    _errorMessage = '';
 
     // Chunk upload
     var uploadOptions = UpChunkOptions()
       ..endPoint = _endPoint
       ..file = fileToUpload
-      ..onProgress = ({ @required double progress }) {
+      ..onProgress = (double progress) {
         setState(() {
           _progress = progress.ceil();
         });
       }
-      ..onError = ({ @required String message, @required int chunk, @required int attempts }) {
+      ..onError = (String message, int chunk, int attempts) {
         setState(() {
           _errorMessage = 'UpChunk error 💥 🙀:\n'
               ' - Message: $message\n'
@@ -93,19 +93,30 @@ class _MyHomePageState extends State<MyHomePage> {
             if (!_uploadComplete)
               Text(
                 'Uploaded: $_progress%',
-                style: Theme.of(context).textTheme.headline4,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.normal,
+                ),
               ),
 
             if (_uploadComplete)
               Text(
                 'Upload complete! 👋',
-                style: Theme.of(context).textTheme.headline4.copyWith(color: Colors.green, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 24,
+                  color: Colors.green,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
 
-            if (_errorMessage != null && _errorMessage.isNotEmpty)
+            if (_errorMessage.isNotEmpty)
               Text(
                 '$_errorMessage%',
-                style: Theme.of(context).textTheme.headline5.copyWith(color: Colors.red),
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.normal,
+                  color: Colors.red,
+                ),
               ),
           ],
         ),

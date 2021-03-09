@@ -5,7 +5,7 @@ Flutter UpChunk is a simple port of the JS library https://github.com/muxinc/upc
 ## Installation
 
 Add the package to the `dependencies` section in `pubspec.yaml`:
- - `flutter_upchunk: ^0.1.4` (or latest)
+ - `flutter_upchunk: ^1.0.0-dev.1` (or latest prerelease)
 
 ## Usage
 
@@ -29,10 +29,10 @@ Future<String> _getUploadUrl() {
 var uploadOptions = UpChunkOptions()
   ..endPointResolver = _getUploadUrl()
   ..file = File(_filePath)
-  ..onProgress = ({ @required double progress }) {
+  ..onProgress = (progress) {
     print('Upload progress: ${progress.ceil()}%');
   }
-  ..onError = ({ @required String message, @required int chunk, @required int attempts }) {
+  ..onError = (String message, int chunk, int attempts) {
     print('UpChunk error 💥 🙀:');
     print(' - Message: $message');
     print(' - Chunk: $chunk');
