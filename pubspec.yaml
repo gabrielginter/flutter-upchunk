@@ -1,6 +1,6 @@
 name: flutter_upchunk
 description: A chunk uploader based on the JS library https://github.com/muxinc/upchunk done by MUX, Inc.
-version: 1.0.0-dev.1
+version: 1.0.0
 homepage: https://github.com/gabrielginter/flutter-upchunk
 
 environment:
@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  dio: ^4.0.0-beta1
+  dio: ^4.0.0-prev3
   connectivity: ^3.0.2
   mime: ^1.0.0
 
