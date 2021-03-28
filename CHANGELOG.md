@@ -1,6 +1,6 @@
 # CHANGES
 
-## [1.0.0] - 2021-03-22
+## [1.0.0] - 2021-03-29
 
 * Null safety migration
 * [Breaking Changes]: All callback event parameters are now _positional_ instead of _named_ to simplify client code
