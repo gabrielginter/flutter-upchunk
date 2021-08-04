@@ -1,5 +1,9 @@
 # CHANGES
 
+## [1.0.1]
+
+- Migrated from the deprecated connectivity plugin to connectivity_plus.
+
 ## [1.0.0] - 2021-03-29
 
 * Null safety migration
