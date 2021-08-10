@@ -1,8 +1,9 @@
 # CHANGES
 
-## [1.0.1]
+## [1.1.0]
 
-- Migrated from the deprecated connectivity plugin to connectivity_plus.
+* Migrated from the deprecated connectivity plugin to connectivity_plus.
+* Added method `stop` to cancel uploads abruptly, Issue #2.
 
 ## [1.0.0] - 2021-03-29
 
@@ -11,7 +12,7 @@
 
 ## [0.1.5] - 2020-11-18
 
-* Restart was not being exectuted when called, flag marking the failed upload was missing
+* Restart was not being executed when called, flag marking the failed upload was missing
 
 ## [0.1.4] - 2020-11-09
 

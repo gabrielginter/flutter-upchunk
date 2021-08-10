@@ -33,6 +33,9 @@ class UpChunk {
   int _attemptCount = 0;
   bool _offline = false;
   bool _paused = false;
+  bool _stopped = false;
+
+  CancelToken? _currentCancelToken;
 
   bool _uploadFailed = false;
 
@@ -91,6 +94,19 @@ class UpChunk {
 
     _paused = false;
     _sendChunks();
+  }
+
+  stop() {
+    _stopped = true;
+    _uploadFailed = true;
+    _currentCancelToken!.cancel(Exception('Upload cancelled by the user'));
+
+    if (_onError != null)
+      _onError!(
+        'Upload cancelled by the user.',
+        _chunkCount,
+        _attemptCount,
+      );
   }
 
   /// It gets [file]'s mime type, if possible
@@ -176,6 +192,8 @@ class UpChunk {
     if (_onAttempt != null)
       _onAttempt!(_chunkCount, _chunkLength,);
 
+    _currentCancelToken = CancelToken();
+
     // returns future with http response
     return Dio().putUri(
       _endpointValue,
@@ -196,6 +214,7 @@ class UpChunk {
             _onProgress!(percentProgress);
         }
       },
+      cancelToken: _currentCancelToken,
     );
   }
 
@@ -239,7 +258,7 @@ class UpChunk {
 
   /// Manages the whole upload by calling [_getChunk] and [_sendChunk]
   _sendChunks() {
-    if (_paused || _offline)
+    if (_paused || _offline || _stopped)
       return;
 
     _getChunk();
@@ -247,6 +266,7 @@ class UpChunk {
         if (successfulChunkUploadCodes.contains(res.statusCode)) {
           _chunkCount++;
           if (_chunkCount < _totalChunks) {
+            _attemptCount = 0;
             _sendChunks();
           } else {
             if (_onSuccess != null) _onSuccess!();
@@ -261,12 +281,12 @@ class UpChunk {
             _onProgress!(percentProgress);
           }
         } else if (temporaryErrorCodes.contains(res.statusCode)) {
-          if (_paused || _offline)
+          if (_paused || _offline || _stopped)
             return;
 
           _manageRetries();
         } else {
-          if (_paused || _offline)
+          if (_paused || _offline || _stopped)
             return;
 
           _uploadFailed = true;
@@ -280,7 +300,7 @@ class UpChunk {
         }
       },
       onError: (err) {
-        if (_paused || _offline)
+        if (_paused || _offline || _stopped)
           return;
 
         // this type of error can happen after network disconnection on CORS setup
@@ -297,8 +317,11 @@ class UpChunk {
     _chunkCount = 0;
     _chunkByteSize = chunkSize * 1024;
     _attemptCount = 0;
+    _currentCancelToken = null;
+
     _offline = false;
     _paused = false;
+    _stopped = false;
     _uploadFailed = false;
 
     _sendChunks();

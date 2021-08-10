@@ -128,6 +128,10 @@ Returns an instance of `UpChunk` and begins uploading the specified `File`.
 
   Restarts the upload from chunk `0`, **use only if and after `onError` was fired**.
 
+- `stop()`
+
+  Cancels the upload abruptly. `restart()` can be used to start the upload from chunk `0`.
+
 ## Credit
 
 Original code by MUX, Inc. and ported to Dart 🎯 with ❤ by a Flutter developer.
