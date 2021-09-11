@@ -1,6 +1,6 @@
 # CHANGES
 
-## [1.1.0]
+## [1.1.0] - 2021-09-11
 
 * Migrated from the deprecated connectivity plugin to connectivity_plus.
 * Added method `stop` to cancel uploads abruptly, Issue #2.
