@@ -1,5 +1,9 @@
 # CHANGES
 
+## [1.2.0] - 2021-12-14
+
+* Updated packages and migration to flutter 2.8.0
+
 ## [1.1.0] - 2021-09-11
 
 * Migrated from the deprecated connectivity plugin to connectivity_plus.
