@@ -1,5 +1,9 @@
 # CHANGES
 
+## [1.3.1] - 2022-02-14
+
+* Updated packages
+
 ## [1.3.0] - 2022-02-14
 
 * Updated packages and migration to flutter 2.10.1
