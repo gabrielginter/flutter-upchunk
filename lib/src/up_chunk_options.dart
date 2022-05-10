@@ -59,5 +59,5 @@ class UpChunkOptions {
   /// Fired continuously with incremental upload progress. This returns the current percentage of the file that's been uploaded.
   ///
   /// [progress] a number from 0 to 100 representing the percentage of the file uploaded
-  void Function(double progress)? onProgress;
+  void Function(double progress, int chunk)? onProgress;
 }

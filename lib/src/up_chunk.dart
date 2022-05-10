@@ -47,7 +47,7 @@ class UpChunk {
       _onAttemptFailure;
   void Function(String message, int chunk, int attempts)? _onError;
   void Function()? _onSuccess;
-  void Function(double progress)? _onProgress;
+  void Function(double progress, int chunk)? _onProgress;
 
   static UpChunk createUpload(UpChunkOptions options) =>
       UpChunk._internal(options);
@@ -218,7 +218,8 @@ class UpChunk {
           final bytesSent = _chunkCount * _chunkByteSize;
           final percentProgress = (bytesSent + sent) * 100.0 / _fileSize;
 
-          if (percentProgress < 100.0) _onProgress!(percentProgress);
+          if (percentProgress < 100.0)
+            _onProgress!(percentProgress, _chunkCount);
         }
       },
       cancelToken: _currentCancelToken,
@@ -284,7 +285,7 @@ class UpChunk {
             final bytesSent = _chunkCount * _chunkByteSize;
             percentProgress = bytesSent * 100.0 / _fileSize;
           }
-          _onProgress!(percentProgress);
+          _onProgress!(percentProgress, _chunkCount);
         }
       } else if (temporaryErrorCodes.contains(res.statusCode)) {
         if (_paused || _offline || _stopped) return;
