@@ -1,5 +1,9 @@
 # CHANGES
 
+## [1.4.0] - 2023-01-20
+
+* Updated packages
+
 ## [1.3.1] - 2022-02-14
 
 * Updated packages
