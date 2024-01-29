@@ -46,7 +46,7 @@ Although the API is a port of the original JS library, some options and properti
 
 ##### Upload options
 
-- `endPoint` <small>type: `string` (required if `endPointResolver` is `null`)</small>
+- `endPoint` <small>type: `string` (required)</small>
 
   URL to upload the file to.
 
