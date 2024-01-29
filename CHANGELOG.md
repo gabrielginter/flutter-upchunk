@@ -1,3 +1,9 @@
+## 2.0.1
+
+* Internet checkup based on endpoint
+* Added comments to constructor properties
+* Updated README.md
+
 ## 2.0.0
 
 * Added web support and replaced connectivity plus with [internet_connection_checker_plus](https://pub.dev/packages/internet_connection_checker_plus)

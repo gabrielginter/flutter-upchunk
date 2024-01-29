@@ -2,9 +2,8 @@ import 'dart:async';
 
 import 'package:cross_file/cross_file.dart';
 import 'package:dio/dio.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:mime/mime.dart';
-
-import 'package:flutter_upchunk/src/connection_status_singleton.dart';
 
 class UpChunk {
   /// HTTP response codes implying the PUT method has been successful
@@ -13,12 +12,59 @@ class UpChunk {
   /// HTTP response codes implying a chunk may be retried
   final temporaryErrorCodes = const [408, 502, 503, 504];
 
+  /// Upload url as [String], required
   final String endPoint;
+
+  /// [XFile] to upload, required
   final XFile file;
+
+  /// A Map with any headers you'd like included with the PUT request for each chunk.
   final Map<String, String> headers;
+
+  /// The size in kb of the chunks to split the file into,
+  /// with the exception of the final chunk which may be smaller.
+  /// This parameter should be in multiples of 64
   final int chunkSize;
+
+  /// The number of times to retry any given chunk.
   final int attempts;
+
+  /// Number of seconds to wait before a retry is fired
   final int delayBeforeAttempt;
+
+  /// Endpoint to check internet connection
+  /// if [connectionCheckEndpoint] is null it defaults to the host in [endPoint]
+  final String? connectionCheckEndpoint;
+
+  /// Fired when the client has gone online.
+  final void Function()? onOnline;
+
+  /// Fired when the client has gone offline.
+  final void Function()? onOffline;
+
+  /// Fired immediately before a chunk upload is attempted.
+  ///
+  /// [chunkNumber] is the number of the current chunk being attempted,
+  /// and [chunkSize] is the size (in bytes) of that chunk.
+  final void Function(int chunkNumber, int chunkSize)? onAttempt;
+
+  /// Fired when an attempt to upload a chunk fails.
+  ///
+  /// [message] is the error message
+  /// [chunkNumber] is the number of the current chunk being attempted,
+  /// and [attemptsLeft] is the number of attempts left before stopping the upload
+  final void Function(String message, int chunkNumber, int attemptsLeft)? onAttemptFailure;
+
+  /// Fired when a chunk has reached the max number of retries or the response code is fatal and implies that retries should not be attempted.
+  final void Function(String message, int chunk, int attempts)? onError;
+
+  /// Fired when the upload is finished successfully.
+  final void Function()? onSuccess;
+
+  /// Fired continuously with incremental upload progress. This returns the current percentage of the file that's been uploaded.
+  ///
+  /// [progress] a number from 0 to 100 representing the percentage of the file uploaded
+  final void Function(double progress )? onProgress;
 
   Stream<List<int>> _chunk = Stream.empty();
   int _chunkLength = 0;
@@ -36,13 +82,8 @@ class UpChunk {
 
   bool _uploadFailed = false;
 
-  final void Function()? onOnline;
-  final void Function()? onOffline;
-  final void Function(int chunkNumber, int chunkSize)? onAttempt;
-  final void Function(String message, int chunkNumber, int attemptsLeft)? onAttemptFailure;
-  final void Function(String message, int chunk, int attempts)? onError;
-  final void Function()? onSuccess;
-  final void Function(double progress )? onProgress;
+  /// flutter_connectivity object
+  late InternetConnection _internetConnection;
 
   /// Internal constructor used by [createUpload]
   UpChunk({
@@ -59,6 +100,7 @@ class UpChunk {
     this.onError,
     this.onSuccess,
     this.onProgress,
+    this.connectionCheckEndpoint,
   }) {
     _validateOptions();
 
@@ -66,8 +108,17 @@ class UpChunk {
 
     // restart sync when back online
     // trigger events when offline/back online
-    ConnectionStatusSingleton connectionStatus = ConnectionStatusSingleton.getInstance();
-    connectionStatus.connectionChange.listen(_connectionChanged);
+    var checkEndpoint = connectionCheckEndpoint != null
+      ? connectionCheckEndpoint!
+      : _endPointUri.origin;
+    _internetConnection = InternetConnection.createInstance(
+      customCheckOptions: [
+        InternetCheckOption(uri: Uri.parse(checkEndpoint)),
+      ],
+      useDefaultOptions: false,
+    );
+
+    _internetConnection.onStatusChange.listen(_connectionChanged);
 
     _initialize();
   }
@@ -132,7 +183,8 @@ class UpChunk {
   ///
   /// if the connection drops [_offline] is marked as true and upload us paused,
   /// if connection is restore [_offline] is marked as false and resumes the upload
-  void _connectionChanged(dynamic hasConnection) {
+  void _connectionChanged(InternetStatus status) {
+    final hasConnection = status == InternetStatus.connected;
     if (hasConnection) {
       if (!_offline)
         return;
