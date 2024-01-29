@@ -1,58 +1,69 @@
-# CHANGES
+## 1.6.0
 
-## [1.5.0] - 2023-05-26
+**Updates**
+
+* Updated all packages
+
+
+**Breaking Changes**
+
+* Remove UpChunkOptions, use UpChunk constructor instead
+* Migrated from File to XFile
+* Removed endpoint resolver, provide an endpoint string instead
+
+## 1.5.0
 
 * Updated packages
 
-## [1.4.0] - 2023-01-20
+## 1.4.0
 
 * Updated packages
 
-## [1.3.1] - 2022-02-14
+## 1.3.1
 
 * Updated packages
 
-## [1.3.0] - 2022-02-14
+## 1.3.0
 
 * Updated packages and migration to flutter 2.10.1
 
-## [1.2.0] - 2021-12-14
+## 1.2.0
 
 * Updated packages and migration to flutter 2.8.0
 
-## [1.1.0] - 2021-09-11
+## 1.1.0
 
 * Migrated from the deprecated connectivity plugin to connectivity_plus.
 * Added method `stop` to cancel uploads abruptly, Issue #2.
 
-## [1.0.0] - 2021-03-29
+## 1.0.0
 
 * Null safety migration
 * [Breaking Changes]: All callback event parameters are now _positional_ instead of _named_ to simplify client code
 
-## [0.1.5] - 2020-11-18
+## 0.1.5
 
 * Restart was not being executed when called, flag marking the failed upload was missing
 
-## [0.1.4] - 2020-11-09
+## 0.1.4
 
 * Added documentation
 * Added example
 
-## [0.1.3] - 2020-11-04
+## 0.1.3
 
 * Fix on `onProgress` callback, method `_sendChunks` was reporting inaccurate value (slightly less than real).
 
-## [0.1.2] - 2020-11-04
+## 0.1.2
 
 * Updated readme file with the correct import directive
 
-## [0.1.1] - 2020-11-04
+## 0.1.1
 
 * Tested on live project and ready for use
 * Making ConnectionStatusSingleton private
 * Changing file structure
 
-## [0.1.0] - 2020-11-04
+## 0.1.0
 
 * Initial release, not yet tested on a project

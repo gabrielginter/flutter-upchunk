@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import 'package:flutter_upchunk/flutter_upchunk.dart';
@@ -47,38 +45,36 @@ class _MyHomePageState extends State<MyHomePage> {
 
     if (pickedFile == null) return;
 
-    _uploadFile(File(pickedFile.path));
+    _uploadFile(pickedFile);
   }
 
-  void _uploadFile(File fileToUpload) {
+  void _uploadFile(XFile fileToUpload) {
     _progress = 0;
     _uploadComplete = false;
     _errorMessage = '';
 
-    // Chunk upload
-    var uploadOptions = UpChunkOptions()
-      ..endPoint = _endPoint
-      ..file = fileToUpload
-      ..onProgress = (double progress) {
+    UpChunk(
+      endPoint: _endPoint,
+      file: fileToUpload,
+      onProgress: (double progress) {
         setState(() {
           _progress = progress.ceil();
         });
-      }
-      ..onError = (String message, int chunk, int attempts) {
+      },
+      onError: (String message, int chunk, int attempts) {
         setState(() {
           _errorMessage = 'UpChunk error 💥 🙀:\n'
-              ' - Message: $message\n'
-              ' - Chunk: $chunk\n'
-              ' - Attempts: $attempts';
+            ' - Message: $message\n'
+            ' - Chunk: $chunk\n'
+            ' - Attempts: $attempts';
         });
-      }
-      ..onSuccess = () {
+      },
+      onSuccess: () {
         setState(() {
-          _uploadComplete = true;
+        _uploadComplete = true;
         });
-      };
-
-    UpChunk.createUpload(uploadOptions);
+      },
+    );
   }
 
   @override

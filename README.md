@@ -5,7 +5,7 @@ Flutter UpChunk is a simple port of the JS library https://github.com/muxinc/upc
 ## Installation
 
 Add the package to the `dependencies` section in `pubspec.yaml`:
- - `flutter_upchunk: ^1.5.0` (or latest release)
+ - `flutter_upchunk: ^1.6.0` (or latest release)
 
 ## Usage
 
@@ -16,43 +16,33 @@ Add the following import to the `.dart` file that will use **UpChunk**
 ### Example
 
 ```dart
-Future<String> _getUploadUrl() {
-  String uploadUrl;
-  // Perform call either to your API or directly to MUX to retrieve the upload URL
-  // ...
-  //
-
-  return uploadUrl;
-}
+final uploadUrl = '';
+final filePath = '';
 
 // Chunk upload
-var uploadOptions = UpChunkOptions()
-  ..endPointResolver = _getUploadUrl()
-  ..file = File(_filePath)
-  ..onProgress = (progress) {
+var upChunkUpload = UpChunk(
+  endPoint: uploadUrl,
+  file: XFile(filePath),
+  onProgress: (progress) {
     print('Upload progress: ${progress.ceil()}%');
-  }
-  ..onError = (String message, int chunk, int attempts) {
+  },
+  onError: (String message, int chunk, int attempts) {
     print('UpChunk error 💥 🙀:');
     print(' - Message: $message');
     print(' - Chunk: $chunk');
     print(' - Attempts: $attempts');
-  }
-  ..onSuccess = () {
+  },
+  onSuccess: () {
     print('Upload complete! 👋');
-  };
-var upChunkUpload = UpChunk.createUpload(uploadOptions);
+  },
+);
 ```
 
 ## API
 
 Although the API is a port of the original JS library, some options and properties differ slightly.
 
-### `createUpload(UpChunkOptions options)`
-
-Returns an instance of `UpChunk` and begins uploading the specified `File`.
-
-#### `UpChunkOptions` parameters:
+#### `UpChunk` constructor:
 
 ##### Upload options
 
@@ -60,11 +50,7 @@ Returns an instance of `UpChunk` and begins uploading the specified `File`.
 
   URL to upload the file to.
 
-- `endPointResolver` <small>type: `Future<String>` (required if `endPoint` is `null`)</small>
-
-   A `Future` that returns the URL as a `String`.
-
-- `file` <small>type: [`File`](https://api.dart.dev/stable/2.10.3/dart-io/File-class.html) (required)</small>
+- `file` <small>type: [`XFile`](https://pub.dev/documentation/cross_file/latest/cross_file/XFile-class.html) (required)</small>
 
   The file you'd like to upload.
 
