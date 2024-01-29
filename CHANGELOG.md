@@ -1,3 +1,11 @@
+## 2.0.0
+
+* Added web support and replaced connectivity plus with [internet_connection_checker_plus](https://pub.dev/packages/internet_connection_checker_plus)
+
+## 1.6.1
+
+* Updated README.md
+
 ## 1.6.0
 
 **Updates**

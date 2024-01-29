@@ -1,12 +1,13 @@
 import 'dart:async';
-import 'dart:io';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 
 class ConnectionStatusSingleton {
   /// Creates the single instance by calling the `_internal` constructor specified below
   static final ConnectionStatusSingleton _singleton = new ConnectionStatusSingleton._internal();
-  ConnectionStatusSingleton._internal();
+  ConnectionStatusSingleton._internal() {
+    initialize();
+  }
 
   /// Retrieves the singleton instance
   static ConnectionStatusSingleton getInstance() => _singleton;
@@ -18,7 +19,7 @@ class ConnectionStatusSingleton {
   StreamController connectionChangeController = new StreamController.broadcast();
 
   /// flutter_connectivity object
-  final Connectivity _connectivity = Connectivity();
+  late InternetConnection _internetConnection;
 
   bool _initialized = false;
 
@@ -27,7 +28,14 @@ class ConnectionStatusSingleton {
   void initialize() {
     if (_initialized) return;
 
-    _connectivity.onConnectivityChanged.listen(_connectionChange);
+    _internetConnection = InternetConnection.createInstance(
+      customCheckOptions: [
+        InternetCheckOption(uri: Uri.parse('https://google.com')),
+      ],
+      useDefaultOptions: false,
+    );
+
+    _internetConnection.onStatusChange.listen(_connectionChange);
     checkConnection();
 
     _initialized = true;
@@ -41,22 +49,15 @@ class ConnectionStatusSingleton {
   }
 
   /// [_connectivity]'s listener
-  void _connectionChange(ConnectivityResult result) {
-    checkConnection();
-  }
+  void _connectionChange(InternetStatus status) => checkConnection();
 
   /// Tests to verify if there's indeed connected to the internet
   Future<bool> checkConnection() async {
     bool previousConnection = hasConnection;
 
     try {
-      final result = await InternetAddress.lookup('google.com');
-      if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
-        hasConnection = true;
-      } else {
-        hasConnection = false;
-      }
-    } on SocketException catch(_) {
+      hasConnection = await _internetConnection.hasInternetAccess;
+    } catch(_) {
       hasConnection = false;
     }
 
