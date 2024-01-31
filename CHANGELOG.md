@@ -1,6 +1,6 @@
 ## 2.0.2
 
-* Issue [_4_](https://github.com/gabrielginter/flutter-upchunk/issues/4): Ability clarify the chunk in which to start the upload using `chunkStart` in the constructor.
+* [**Issue #4**](https://github.com/gabrielginter/flutter-upchunk/issues/4): Ability to clarify the chunk in which to start the upload using `chunkStart` in the constructor.
 
 ## 2.0.1
 
@@ -10,7 +10,7 @@
 
 ## 2.0.0
 
-* Added web support and replaced connectivity plus with [internet_connection_checker_plus](https://pub.dev/packages/internet_connection_checker_plus)
+* Added web support and replaced connectivity_plus with [internet_connection_checker_plus](https://pub.dev/packages/internet_connection_checker_plus)
 
 ## 1.6.1
 
@@ -52,7 +52,7 @@
 ## 1.1.0
 
 * Migrated from the deprecated connectivity plugin to connectivity_plus.
-* Added method `stop` to cancel uploads abruptly, Issue #2.
+* Added method `stop` to cancel uploads abruptly, [**Issue #2**](https://github.com/gabrielginter/flutter-upchunk/issues/2).
 
 ## 1.0.0
 
