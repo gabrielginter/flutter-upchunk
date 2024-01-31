@@ -1,3 +1,7 @@
+## 2.0.2
+
+* Issue [_4_](https://github.com/gabrielginter/flutter-upchunk/issues/4): Ability clarify the chunk in which to start the upload using `chunkStart` in the constructor.
+
 ## 2.0.1
 
 * Internet checkup based on endpoint

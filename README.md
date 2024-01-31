@@ -5,7 +5,7 @@ Flutter UpChunk is a simple port of the JS library https://github.com/muxinc/upc
 ## Installation
 
 Add the package to the `dependencies` section in `pubspec.yaml`:
- - `flutter_upchunk: ^2.0.1` (or latest release)
+ - `flutter_upchunk: ^2.0.2` (or latest release)
 
 ## Usage
 
@@ -73,6 +73,10 @@ Although the API is a port of the original JS library, some options and properti
 - `connectionCheckEndpoint` <small>type: `String`, default: `null`</small>
 
   Endpoint to check internet connection, if null, it defaults to the `origin` in `endPoint`
+
+- `chunkStart` <small>type: `integer`, default: `null`</small>
+
+  The chunk number to start the upload from, useful in case the uploads fails in `x` chunk and the instance to the object is lost, UpChunk can pick up the upload from there.
 
 ##### Event options
 

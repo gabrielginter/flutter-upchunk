@@ -101,11 +101,14 @@ class UpChunk {
     this.onSuccess,
     this.onProgress,
     this.connectionCheckEndpoint,
+    int? chunkStart,
   }) {
     _validateOptions();
 
     _chunkByteSize = chunkSize * 1024;
-
+    if (chunkStart != null) {
+      _chunkCount = chunkStart;
+    }
     // restart sync when back online
     // trigger events when offline/back online
     var checkEndpoint = connectionCheckEndpoint != null
@@ -126,6 +129,9 @@ class UpChunk {
   Future<void> _initialize() async {
     _fileSize = await file.length();
     _totalChunks =  (_fileSize / _chunkByteSize).ceil();
+    if (_chunkCount > _totalChunks) {
+      throw Exception('The total number of chunks is $_totalChunks, but [chunkStart] is $_chunkCount');
+    }
 
     await _getMimeType();
     _sendChunks();
@@ -147,12 +153,13 @@ class UpChunk {
     _uploadFailed = true;
     _currentCancelToken!.cancel(Exception('Upload cancelled by the user'));
 
-    if (onError != null)
+    if (onError != null) {
       onError!(
         'Upload cancelled by the user.',
         _chunkCount,
         _attemptCount,
       );
+    }
   }
 
   /// It gets [file]'s mime type, if possible
@@ -186,8 +193,7 @@ class UpChunk {
   void _connectionChanged(InternetStatus status) {
     final hasConnection = status == InternetStatus.connected;
     if (hasConnection) {
-      if (!_offline)
-        return;
+      if (!_offline) return;
 
       _offline = false;
 
@@ -310,13 +316,11 @@ class UpChunk {
             onProgress!(percentProgress);
           }
         } else if (temporaryErrorCodes.contains(res.statusCode)) {
-          if (_paused || _offline || _stopped)
-            return;
+          if (_paused || _offline || _stopped) return;
 
           _manageRetries();
         } else {
-          if (_paused || _offline || _stopped)
-            return;
+          if (_paused || _offline || _stopped) return;
 
           _uploadFailed = true;
 
@@ -329,8 +333,7 @@ class UpChunk {
         }
       },
       onError: (err) {
-        if (_paused || _offline || _stopped)
-          return;
+        if (_paused || _offline || _stopped) return;
 
         // this type of error can happen after network disconnection on CORS setup
         _manageRetries();
