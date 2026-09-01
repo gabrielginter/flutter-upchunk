@@ -1,3 +1,27 @@
+## 2.1.0
+
+**Breaking**
+
+* `onSuccess` now receives the HTTP `Response` of the final chunk: `onSuccess: (response) { ... }`. Migration: add the parameter to your callback (and use it, or ignore it).
+
+**Fixes**
+
+* Uploads no longer stall silently mid-way ([#8](https://github.com/gabrielginter/flutter-upchunk/issues/8), [#12](https://github.com/gabrielginter/flutter-upchunk/issues/12)). The internet-connection watchdog probed the upload endpoint's origin and treated any non-200 reply as *offline* — hosts such as the GCS origin behind Mux direct-upload URLs answer plain probes with 400, so seconds into an upload the check flagged the connection as lost and paused the upload with no error and no way to resume.
+* No more concurrent chunk uploads corrupting each other's state ([#12](https://github.com/gabrielginter/flutter-upchunk/issues/12)): the send loop is re-entrancy guarded and stale chunk completions (from a `stop()`/`restart()` while a request was in flight) are discarded, so `content-range` headers can no longer be computed from clobbered state.
+* Errors while preparing the upload (e.g. an unreadable file) are now surfaced through `onError` and `done` instead of failing silently ([#11](https://github.com/gabrielginter/flutter-upchunk/issues/11)).
+* `stop()` no longer throws when called before the first chunk request is issued, and no callbacks fire after it.
+
+**Changes**
+
+* **Removed the internet-connection watchdog** and the `internet_connection_checker_plus` dependency ([#11](https://github.com/gabrielginter/flutter-upchunk/issues/11)). Connection drops are handled by the retry logic (`attempts` × `delayBeforeAttempt`) ending in `onError`. `connectionCheckEndpoint`, `onOnline` and `onOffline` are now deprecated no-ops.
+* A single HTTP client is reused for the whole upload instead of creating one per chunk.
+
+**Additions**
+
+* `Future<Response> done` — await the whole upload; completes with the final chunk's response, or with an error on failure or `stop()` ([#10](https://github.com/gabrielginter/flutter-upchunk/issues/10)).
+
+The `onSuccess` signature change also resolves [#9](https://github.com/gabrielginter/flutter-upchunk/issues/9) (final response exposed to the success callback).
+
 ## 2.0.3
 
 * Updated all packages and bumped dart/flutter versions

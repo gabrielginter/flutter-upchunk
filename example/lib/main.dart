@@ -69,7 +69,7 @@ class _MyHomePageState extends State<MyHomePage> {
             ' - Attempts: $attempts';
         });
       },
-      onSuccess: () {
+      onSuccess: (response) {
         setState(() {
         _uploadComplete = true;
         });

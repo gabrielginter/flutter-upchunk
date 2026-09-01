@@ -5,7 +5,7 @@ Flutter UpChunk is a simple port of the JS library https://github.com/muxinc/upc
 ## Installation
 
 Add the package to the `dependencies` section in `pubspec.yaml`:
- - `flutter_upchunk: ^2.0.3` (or latest release)
+ - `flutter_upchunk: ^2.1.0` (or latest release)
 
 ## Usage
 
@@ -32,10 +32,23 @@ var upChunkUpload = UpChunk(
     print(' - Chunk: $chunk');
     print(' - Attempts: $attempts');
   },
-  onSuccess: () {
-    print('Upload complete! 👋');
+  onSuccess: (response) {
+    print('Upload complete! 👋 (status: ${response.statusCode})');
   },
 );
+```
+
+Or `await` the upload instead of using callbacks:
+
+```dart
+final upChunk = UpChunk(
+  endPoint: uploadUrl,
+  file: XFile(filePath),
+  onProgress: (progress) => print('Upload progress: ${progress.ceil()}%'),
+);
+
+final response = await upChunk.done; // throws on failure or stop()
+print('Upload complete! 👋 (status: ${response.statusCode})');
 ```
 
 ## API
@@ -70,10 +83,6 @@ Although the API is a port of the original JS library, some options and properti
 
   The time in seconds to wait before attempting to upload a chunk again.
 
-- `connectionCheckEndpoint` <small>type: `String`, default: `null`</small>
-
-  Endpoint to check internet connection, if null, it defaults to the `origin` in `endPoint`
-
 - `chunkStart` <small>type: `integer`, default: `null`</small>
 
   The chunk number to start the upload from, useful in case the uploads fails in `x` chunk and the instance to the object is lost, UpChunk can pick up the upload from there.
@@ -92,21 +101,13 @@ Although the API is a port of the original JS library, some options and properti
 
   Fired when a chunk has reached the max number of retries or the response code is fatal and implies that retries should not be attempted.
 
-- `onOffline`
-
-  Fired when the client has gone offline.
-
-- `onOnline`
-
-  Fired when the client has gone online.
-
 - `onProgress` <small>`progress double [0..100]`</small>
 
   Fired continuously with incremental upload progress. This returns the current percentage of the file that's been uploaded.
 
-- `onSuccess`
+- `onSuccess` <small>`{ response: Response }`</small>
 
-  Fired when the upload is finished successfully.
+  Fired when the upload is finished successfully, with the HTTP response of the final chunk.
 
 ### UpChunk Instance Methods
 
@@ -125,6 +126,14 @@ Although the API is a port of the original JS library, some options and properti
 - `stop()`
 
   Cancels the upload abruptly. `restart()` can be used to start the upload from chunk `0`.
+
+### UpChunk Instance Properties
+
+- `done`
+
+  A `Future<Response>` that completes with the final chunk's HTTP response when the upload finishes, or completes with an error when the upload fails or `stop()` is called. After `restart()` it reflects the new attempt.
+
+> **Note:** connection drops are handled by the retry logic (`attempts` retries, `delayBeforeRetry` seconds apart) and end in `onError` — there is no internet-connection watchdog anymore.
 
 ## Credit
 

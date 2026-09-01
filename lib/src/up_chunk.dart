@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:cross_file/cross_file.dart';
 import 'package:dio/dio.dart';
-import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:mime/mime.dart';
 
 class UpChunk {
@@ -32,16 +31,6 @@ class UpChunk {
   /// Number of seconds to wait before a retry is fired
   final int delayBeforeAttempt;
 
-  /// Endpoint to check internet connection
-  /// if [connectionCheckEndpoint] is null it defaults to the host in [endPoint]
-  final String? connectionCheckEndpoint;
-
-  /// Fired when the client has gone online.
-  final void Function()? onOnline;
-
-  /// Fired when the client has gone offline.
-  final void Function()? onOffline;
-
   /// Fired immediately before a chunk upload is attempted.
   ///
   /// [chunkNumber] is the number of the current chunk being attempted,
@@ -58,13 +47,14 @@ class UpChunk {
   /// Fired when a chunk has reached the max number of retries or the response code is fatal and implies that retries should not be attempted.
   final void Function(String message, int chunk, int attempts)? onError;
 
-  /// Fired when the upload is finished successfully.
-  final void Function()? onSuccess;
+  /// Fired when the upload is finished successfully, with the HTTP [Response]
+  /// of the final chunk.
+  final void Function(Response response)? onSuccess;
 
   /// Fired continuously with incremental upload progress. This returns the current percentage of the file that's been uploaded.
   ///
   /// [progress] a number from 0 to 100 representing the percentage of the file uploaded
-  final void Function(double progress )? onProgress;
+  final void Function(double progress)? onProgress;
 
   Stream<List<int>> _chunk = Stream.empty();
   int _chunkLength = 0;
@@ -74,16 +64,31 @@ class UpChunk {
   String? _fileMimeType;
   int _totalChunks = 0;
   int _attemptCount = 0;
-  bool _offline = false;
   bool _paused = false;
   bool _stopped = false;
+
+  /// Guards against concurrent chunk uploads: [_sendChunks] is a no-op while
+  /// a chunk request is already in flight.
+  bool _sending = false;
+
+  /// Bumped by [stop] and [restart]; completions belonging to a previous
+  /// epoch are discarded so they cannot clobber the current upload's state.
+  int _epoch = 0;
 
   CancelToken? _currentCancelToken;
 
   bool _uploadFailed = false;
 
-  /// flutter_connectivity object
-  late InternetConnection _internetConnection;
+  final Dio _dio = Dio();
+
+  Completer<Response> _doneCompleter = Completer<Response>();
+
+  /// Completes with the HTTP [Response] of the final chunk when the upload
+  /// finishes successfully, or with an error when the upload fails fatally or
+  /// is stopped with [stop].
+  ///
+  /// After [restart], reflects the new upload attempt.
+  Future<Response> get done => _doneCompleter.future;
 
   /// Internal constructor used by [createUpload]
   UpChunk({
@@ -93,44 +98,37 @@ class UpChunk {
     this.chunkSize = 5120,
     this.attempts = 5,
     this.delayBeforeAttempt = 1,
-    this.onOnline,
-    this.onOffline,
     this.onAttempt,
     this.onAttemptFailure,
     this.onError,
     this.onSuccess,
     this.onProgress,
-    this.connectionCheckEndpoint,
     int? chunkStart,
   }) {
     _validateOptions();
+
+    // Errors are also delivered through [onError]; never awaiting [done] must
+    // not surface an unhandled asynchronous error.
+    _doneCompleter.future.ignore();
 
     _chunkByteSize = chunkSize * 1024;
     if (chunkStart != null) {
       _chunkCount = chunkStart;
     }
-    // restart sync when back online
-    // trigger events when offline/back online
-    var checkEndpoint = connectionCheckEndpoint != null
-      ? connectionCheckEndpoint!
-      : _endPointUri.origin;
-    _internetConnection = InternetConnection.createInstance(
-      customCheckOptions: [
-        InternetCheckOption(uri: Uri.parse(checkEndpoint)),
-      ],
-      useDefaultOptions: false,
-    );
-
-    _internetConnection.onStatusChange.listen(_connectionChanged);
 
     _initialize();
   }
 
   Future<void> _initialize() async {
-    _fileSize = await file.length();
-    _totalChunks =  (_fileSize / _chunkByteSize).ceil();
-    if (_chunkCount > _totalChunks) {
-      throw Exception('The total number of chunks is $_totalChunks, but [chunkStart] is $_chunkCount');
+    try {
+      _fileSize = await file.length();
+      _totalChunks = (_fileSize / _chunkByteSize).ceil();
+      if (_chunkCount > _totalChunks) {
+        throw Exception('The total number of chunks is $_totalChunks, but [chunkStart] is $_chunkCount');
+      }
+    } catch (exc) {
+      _fail('Failed to prepare upload: $exc');
+      return;
     }
 
     await _getMimeType();
@@ -149,9 +147,17 @@ class UpChunk {
   }
 
   void stop() {
+    if (_stopped) return;
+
     _stopped = true;
     _uploadFailed = true;
-    _currentCancelToken!.cancel(Exception('Upload cancelled by the user'));
+    _epoch++;
+    _sending = false;
+    _currentCancelToken?.cancel(Exception('Upload cancelled by the user'));
+
+    if (!_doneCompleter.isCompleted) {
+      _doneCompleter.completeError(Exception('Upload cancelled by the user.'));
+    }
 
     if (onError != null) {
       onError!(
@@ -186,27 +192,20 @@ class UpChunk {
   /// Gets [Uri] from [endPoint]
   Uri get _endPointUri => Uri.parse(endPoint);
 
-  /// Callback for [ConnectionStatusSingleton] to notify connection changes
-  ///
-  /// if the connection drops [_offline] is marked as true and upload us paused,
-  /// if connection is restore [_offline] is marked as false and resumes the upload
-  void _connectionChanged(InternetStatus status) {
-    final hasConnection = status == InternetStatus.connected;
-    if (hasConnection) {
-      if (!_offline) return;
+  /// Routes a fatal failure to [onError] and [done].
+  void _fail(String message) {
+    _uploadFailed = true;
 
-      _offline = false;
-
-      if (onOnline != null) onOnline!();
-
-      _sendChunks();
+    if (!_doneCompleter.isCompleted) {
+      _doneCompleter.completeError(Exception(message));
     }
 
-    if (!hasConnection) {
-      _offline = true;
-
-      if (onOffline != null) onOffline!();
-    }
+    if (onError != null)
+      onError!(
+        message,
+        _chunkCount,
+        _attemptCount,
+      );
   }
 
   /// Sends [_chunk] of the file with appropriate headers
@@ -219,7 +218,7 @@ class UpChunk {
       'content-range': 'bytes $rangeStart-$rangeEnd/$_fileSize',
       Headers.contentLengthHeader: _chunkLength
     };
-    if (_fileMimeType != null){
+    if (_fileMimeType != null) {
       putHeaders.putIfAbsent(Headers.contentTypeHeader, () => _fileMimeType!);
     }
     headers.forEach((key, value) => putHeaders.putIfAbsent(key, () => value));
@@ -228,9 +227,10 @@ class UpChunk {
       onAttempt!(_chunkCount, _chunkLength,);
 
     _currentCancelToken = CancelToken();
+    final epoch = _epoch;
 
     // returns future with http response
-    return Dio().putUri(
+    return _dio.putUri(
       _endPointUri,
       options: Options(
         headers: putHeaders,
@@ -241,6 +241,8 @@ class UpChunk {
       ),
       data: _chunk,
       onSendProgress: (int sent, int total) {
+        if (epoch != _epoch || _stopped) return;
+
         if (onProgress != null) {
           final bytesSent = _chunkCount * _chunkByteSize;
           final percentProgress = (bytesSent + sent) * 100.0 / _fileSize;
@@ -269,7 +271,12 @@ class UpChunk {
   void _manageRetries() {
     if (_attemptCount < attempts) {
       _attemptCount = _attemptCount + 1;
-      Timer(Duration(seconds: delayBeforeAttempt), () => _sendChunks());
+      final epoch = _epoch;
+      Timer(Duration(seconds: delayBeforeAttempt), () {
+        if (epoch != _epoch || _stopped) return;
+
+        _sendChunks();
+      });
 
       if (onAttemptFailure != null)
         onAttemptFailure!(
@@ -281,30 +288,32 @@ class UpChunk {
       return;
     }
 
-    _uploadFailed = true;
-
-    if (onError != null)
-      onError!(
-        'An error occurred uploading chunk $_chunkCount. No more retries, stopping upload',
-        _chunkCount,
-        _attemptCount,
-      );
+    _fail('An error occurred uploading chunk $_chunkCount. No more retries, stopping upload');
   }
 
   /// Manages the whole upload by calling [_getChunk] and [_sendChunk]
   void _sendChunks() {
-    if (_paused || _offline || _stopped)
-      return;
+    if (_paused || _stopped || _sending) return;
+
+    _sending = true;
+    final epoch = _epoch;
 
     _getChunk();
     _sendChunk().then((res) {
+        // A stale completion (the upload was stopped or restarted while this
+        // chunk was in flight) must not touch the current upload's state.
+        if (epoch != _epoch) return;
+        _sending = false;
+        if (_paused || _stopped) return;
+
         if (successfulChunkUploadCodes.contains(res.statusCode)) {
           _chunkCount++;
           if (_chunkCount < _totalChunks) {
             _attemptCount = 0;
             _sendChunks();
           } else {
-            if (onSuccess != null) onSuccess!();
+            if (onSuccess != null) onSuccess!(res);
+            if (!_doneCompleter.isCompleted) _doneCompleter.complete(res);
           }
 
           if (onProgress != null) {
@@ -316,26 +325,17 @@ class UpChunk {
             onProgress!(percentProgress);
           }
         } else if (temporaryErrorCodes.contains(res.statusCode)) {
-          if (_paused || _offline || _stopped) return;
-
           _manageRetries();
         } else {
-          if (_paused || _offline || _stopped) return;
-
-          _uploadFailed = true;
-
-          if (onError != null)
-            onError!(
-              'Server responded with ${res.statusCode}. Stopping upload.',
-              _chunkCount,
-              _attemptCount,
-            );
+          _fail('Server responded with ${res.statusCode}. Stopping upload.');
         }
       },
       onError: (err) {
-        if (_paused || _offline || _stopped) return;
+        if (epoch != _epoch) return;
+        _sending = false;
+        if (_paused || _stopped) return;
 
-        // this type of error can happen after network disconnection on CORS setup
+        // Network errors: retry until [attempts] is exhausted.
         _manageRetries();
       }
     );
@@ -344,17 +344,23 @@ class UpChunk {
   /// Restarts the upload after if the upload failed and came to a complete stop
   void restart() {
     if (!_uploadFailed)
-      throw Exception('Upload hasn\'t yet failed, use restart only after all retries have failed.');
+      throw Exception('Upload has not yet failed, use restart only after all retries have failed.');
 
+    _epoch++;
     _chunkCount = 0;
     _chunkByteSize = chunkSize * 1024;
     _attemptCount = 0;
     _currentCancelToken = null;
 
-    _offline = false;
     _paused = false;
     _stopped = false;
+    _sending = false;
     _uploadFailed = false;
+
+    if (_doneCompleter.isCompleted) {
+      _doneCompleter = Completer<Response>();
+      _doneCompleter.future.ignore();
+    }
 
     _sendChunks();
   }
